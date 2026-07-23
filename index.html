@@ -277,6 +277,22 @@
 
   </div>
 
+  <!-- GALLERY DOWNLOAD OVERLAY MODAL -->
+  <div id="modal-galeria" class="hidden fixed inset-0 bg-black/80 flex flex-col items-center justify-center p-4 z-50 no-print">
+    <div class="bg-white border border-black p-4 max-w-sm w-full text-center space-y-4 shadow-xl">
+      <div class="text-xs font-bold uppercase tracking-wider text-amber-600">Listo para Guardar</div>
+      <p class="text-[11px] text-gray-600 leading-normal">
+        Para guardar en tu galería, mantén presionada la imagen de abajo y selecciona <strong>"Guardar en Fotos"</strong> o <strong>"Descargar imagen"</strong>.
+      </p>
+      <div class="border border-black max-h-[300px] overflow-y-auto">
+        <img id="img-modal-preview" class="w-full object-contain" src="" alt="Vista previa de registro">
+      </div>
+      <button onclick="cerrarModalGaleria()" class="w-full bg-black text-white py-2 text-xs font-bold uppercase border border-black hover:bg-neutral-800 transition">
+        Cerrar
+      </button>
+    </div>
+  </div>
+
   <script>
     function uploadSignature(input) {
       if (input.files && input.files[0]) {
@@ -410,23 +426,70 @@
       }, 200);
     }
     
+    function cerrarModalGaleria() {
+      document.getElementById("modal-galeria").classList.add("hidden");
+    }
+
     function exportImage() {
        if(!document.getElementById('hoja-registro').classList.contains('preview-mode')) togglePreviewV2(true);
        setTimeout(() => {
-          html2canvas(document.getElementById("hoja-registro"), {scale: 2}).then(canvas => {
+          const originalElement = document.getElementById("hoja-registro");
+          
+          const clone = originalElement.cloneNode(true);
+          clone.style.transform = "none";
+          clone.style.transformOrigin = "top left";
+          clone.style.position = "absolute";
+          clone.style.top = "-9999px";
+          clone.style.left = "-9999px";
+          clone.style.width = "900px";
+          clone.style.height = "auto";
+          clone.style.opacity = "1";
+          clone.classList.add("preview-mode");
+
+          document.body.appendChild(clone);
+
+          html2canvas(clone, {
+             scale: 3,
+             useCORS: true,
+             backgroundColor: "#ffffff",
+             width: 900,
+             windowWidth: 900
+          }).then(canvas => {
+             document.body.removeChild(clone);
+
              canvas.toBlob(function(blob) {
                 if (!blob) return;
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.download = getFileName('.png');
-                link.href = url;
-                document.body.appendChild(link); // Requisito crítico para móviles y Safari
-                link.click();
-                setTimeout(() => {
-                   document.body.removeChild(link);
-                   URL.revokeObjectURL(url);
-                }, 100);
+                const filename = getFileName('.png');
+                const file = new File([blob], filename, { type: "image/png" });
+                
+                function runFallback() {
+                   const imgData = canvas.toDataURL("image/png");
+                   const previewImg = document.getElementById("img-modal-preview");
+                   if (previewImg) previewImg.src = imgData;
+                   
+                   const modal = document.getElementById("modal-galeria");
+                   if (modal) modal.classList.remove("hidden");
+                   
+                   // Intentar descarga PC
+                   const link = document.createElement("a");
+                   link.download = filename;
+                   link.href = imgData;
+                   link.click();
+                }
+
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                   navigator.share({
+                      files: [file],
+                      title: 'Registro Lujoturissa',
+                      text: 'Registro de Trabajo Diario'
+                   }).catch(err => runFallback());
+                } else {
+                   runFallback();
+                }
              }, "image/png");
+          }).catch(err => {
+             if (document.body.contains(clone)) document.body.removeChild(clone);
+             alert("Error: " + err.message);
           });
        }, 200);
     }
