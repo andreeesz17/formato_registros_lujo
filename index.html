@@ -33,7 +33,7 @@
       body { background: #ffffff !important; color: #000000 !important; padding: 0 !important; margin: 0 !important; }
     }
     input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    input[type=number] { -moz-appearance: textfield; }
+    input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
     /* Tables */
     #hoja-registro table, #hoja-registro th, #hoja-registro td {
@@ -81,10 +81,14 @@
     .preview-mode input { display: none !important; }
     
     /* Force size on Print/Export */
-    @media print, .preview-mode {
+    @media print {
       #hoja-registro { width: 900px !important; max-width: 900px !important; padding: 24px !important; margin: 0 auto !important; background: #ffffff !important; }
       .hidden-print { display: none !important; }
     }
+    #hoja-registro.preview-mode {
+      width: 900px !important; max-width: 900px !important; padding: 24px !important; margin: 0 auto !important; background: #ffffff !important;
+    }
+    .preview-mode .hidden-print { display: none !important; }
   </style>
 </head>
 <body class="bg-gray-100 text-black min-h-screen font-sans p-1 sm:p-4">
