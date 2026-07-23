@@ -414,10 +414,19 @@
        if(!document.getElementById('hoja-registro').classList.contains('preview-mode')) togglePreviewV2(true);
        setTimeout(() => {
           html2canvas(document.getElementById("hoja-registro"), {scale: 2}).then(canvas => {
-             const link = document.createElement("a");
-             link.download = getFileName('.png');
-             link.href = canvas.toDataURL("image/png");
-             link.click();
+             canvas.toBlob(function(blob) {
+                if (!blob) return;
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.download = getFileName('.png');
+                link.href = url;
+                document.body.appendChild(link); // Requisito crítico para móviles y Safari
+                link.click();
+                setTimeout(() => {
+                   document.body.removeChild(link);
+                   URL.revokeObjectURL(url);
+                }, 100);
+             }, "image/png");
           });
        }, 200);
     }
