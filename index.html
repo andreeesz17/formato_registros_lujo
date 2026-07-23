@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=900, user-scalable=yes">
+  <title>Empresa de Transporte Lujoturissa S.A. - Registro de Trabajo Diario</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Tailwind Custom Configuration -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Arial', 'Helvetica', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- External Libraries CDNs for Export Functionality -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    /* Global Print and Preview Overrides */
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #ffffff !important; color: #000000 !important; padding: 0 !important; margin: 0 !important; }
+    }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    /* Tables */
+    #hoja-registro table, #hoja-registro th, #hoja-registro td {
+      border: 1px solid #000000 !important;
+      border-collapse: collapse !important;
+    }
+    #hoja-registro table td, #hoja-registro table th {
+      padding: 0 !important; vertical-align: middle !important;
+    }
+    .data-table td, .data-table th {
+      height: 30px !important;
+    }
+    .totals-table td {
+      height: 36px !important;
+    }
+    .valor-centrado {
+      display: block !important;
+      width: 100% !important;
+      text-align: center !important;
+      box-sizing: border-box !important;
+    }
+
+    /* Input styling */
+    #hoja-registro input[type="text"], #hoja-registro input[type="number"], #hoja-registro input[type="date"] {
+      color: #ef4444; /* Red color as in the picture for handwritten text */
+      font-weight: bold;
+      background: transparent;
+      outline: none;
+      border: none !important;
+      width: 100%;
+      text-align: center;
+    }
+    
+    /* Layout styling to closely match the image */
+    .header-text { color: #1e3a8a; } /* Dark Blue text */
+    
+    .meta-table { width: 100%; border: 2px solid black !important; margin-bottom: 20px; font-weight: bold; }
+    .meta-table td { padding: 4px 8px !important; text-align: left !important; border: 1px solid black !important; }
+    .meta-label { color: #000; }
+    
+    /* Preview spans */
+    .preview-span { display: none; }
+    .preview-mode .preview-span { display: inline !important; }
+    .preview-mode .edit-field { display: none !important; }
+    .preview-mode input { display: none !important; }
+    
+    /* Force size on Print/Export */
+    @media print, .preview-mode {
+      #hoja-registro { width: 900px !important; max-width: 900px !important; padding: 24px !important; margin: 0 auto !important; background: #ffffff !important; }
+      .hidden-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-black min-h-screen font-sans p-1 sm:p-4">
+
+  <!-- TOP CONTROL BAR -->
+  <div class="no-print max-w-[900px] mx-auto bg-white border border-black p-3 mb-3 flex flex-wrap justify-between items-center gap-2 shadow-sm">
+    <div class="text-xs font-bold font-sans tracking-wide uppercase">Registro de Trabajo - Lujoturissa</div>
+    <div class="flex flex-wrap gap-2">
+      <button id="btn-toggle-preview" onclick="togglePreviewV2(true)" class="bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs py-1.5 px-4 border border-black transition">
+        Ver Vista Previa
+      </button>
+      <button onclick="exportExcel()" class="bg-black hover:bg-neutral-800 text-white font-bold text-xs py-1.5 px-4 border border-black transition">
+        Excel (.xlsx)
+      </button>
+      <button onclick="exportImage()" class="bg-black hover:bg-neutral-800 text-white font-bold text-xs py-1.5 px-4 border border-black transition">
+        Imagen (.png)
+      </button>
+      <button onclick="exportPDF()" class="bg-black hover:bg-neutral-800 text-white font-bold text-xs py-1.5 px-4 border border-black transition">
+        PDF / Imprimir
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN SHEET -->
+  <div id="hoja-registro" class="w-[900px] mx-auto bg-white p-8 text-black shadow-lg relative">
+    
+    <!-- Header -->
+    <div class="text-center mb-4 header-text">
+      <h1 class="text-2xl font-bold tracking-wide uppercase">Empresa de Transporte Lujoturissa S.A</h1>
+      <h2 class="text-lg font-bold tracking-wide uppercase mt-1">Registro de Trabajo Diario</h2>
+    </div>
+
+    <!-- Metadata Table -->
+    <table class="w-full text-sm font-bold bg-gray-50/50 mb-5" style="border: 2px solid black; border-collapse: collapse;">
+      <tr>
+        <td class="w-1/2 align-middle" style="border: 1px solid black; padding: 6px 8px !important;">
+          <div style="display: block;">
+            <span>FECHA:</span> 
+            <input type="date" id="input-date" class="edit-field !text-red-500 ml-2" style="width: auto;">
+            <span id="preview-date" class="preview-span !text-red-500 ml-2"></span>
+          </div>
+        </td>
+        <td class="w-1/2 align-middle" style="border: 1px solid black; padding: 6px 8px !important;">
+          <div style="display: block;">
+            <span>UNIDAD:</span> 
+            <input type="text" id="input-unidad" class="edit-field !text-red-500 ml-2" style="width: 150px;">
+            <span id="preview-unidad" class="preview-span !text-red-500 ml-2"></span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid black; padding: 6px 8px !important; vertical-align: top;">
+          <div style="display: block;">PROPIETARIO/(A):</div>
+          <div style="text-align: center; width: 100%; margin-top: 4px; min-height: 20px;">
+            <input type="text" id="input-propietario" class="edit-field !text-red-500 w-full text-center">
+            <span id="preview-propietario" class="preview-span !text-red-500"></span>
+          </div>
+        </td>
+        <td style="border: 1px solid black; padding: 6px 8px !important; vertical-align: top;">
+          <div style="display: block;">COD. MUNICIPAL:</div>
+          <div style="text-align: center; width: 100%; margin-top: 4px; min-height: 20px;">
+            <input type="text" id="input-codigo" class="edit-field !text-red-500 w-full text-center">
+            <span id="preview-codigo" class="preview-span !text-red-500"></span>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <div class="text-center font-bold text-lg mb-2 header-text tracking-wider">
+      DETALLES DE RECAUDACIÓN
+    </div>
+
+    <!-- Data Tables Grid -->
+    <div class="flex gap-4">
+      
+      <!-- INGRESOS TABLE -->
+      <div class="w-[55%]">
+        <table class="w-full text-center text-sm data-table">
+          <thead>
+            <tr class="bg-gray-100/50">
+              <th colspan="4" class="py-1">INGRESOS</th>
+            </tr>
+            <tr>
+              <th class="w-[20%]">VUELTA</th>
+              <th class="w-[25%]">$ BAJADA</th>
+              <th class="w-[25%]">$ SUBIDA</th>
+              <th class="w-[30%]">$ TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <script>
+              for(let i=1; i<=5; i++) {
+                document.write(`
+                  <tr>
+                    <td class="font-bold">${i}</td>
+                    <td><input type="number" step="0.01" id="ing-bajada-${i}" oninput="calcular()"></td>
+                    <td><input type="number" step="0.01" id="ing-subida-${i}" oninput="calcular()"></td>
+                    <td class="font-bold text-blue-700" id="ing-total-${i}"></td>
+                  </tr>
+                `);
+              }
+            </script>
+            <tr>
+              <td colspan="3" class="text-right pr-4 font-bold bg-gray-100/50" style="height: 32px;">TOTAL INGRESOS</td>
+              <td class="font-bold bg-gray-100/50 p-0 text-center text-blue-700 align-middle" style="height: 32px;" id="lbl-total-ingresos"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- GASTOS TABLE -->
+      <div class="w-[45%] flex flex-col justify-between">
+        <table class="w-full text-sm h-full data-table">
+          <thead>
+            <tr class="bg-gray-100/50">
+              <th colspan="2" class="py-1 text-center">GASTOS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-bold px-2 w-[65%]">GASTO COMBUSTIBLE</td>
+              <td class="w-[35%]"><div class="flex items-center px-1"><span class="font-bold mr-1">$</span><input type="number" step="0.01" id="gas-valor-1" oninput="calcular()"></div></td>
+            </tr>
+            <tr>
+              <td class="font-bold px-2">GASTO CONDUCTOR</td>
+              <td><div class="flex items-center px-1"><span class="font-bold mr-1">$</span><input type="number" step="0.01" id="gas-valor-2" oninput="calcular()"></div></td>
+            </tr>
+            <tr>
+              <td class="font-bold px-2">TICKET ADMINISTRACIÓN</td>
+              <td><div class="flex items-center px-1"><span class="font-bold mr-1">$</span><input type="number" step="0.01" id="gas-valor-3" oninput="calcular()"></div></td>
+            </tr>
+            <tr>
+              <td class="px-2"><input type="text" id="gas-desc-4" placeholder="Otro..." class="text-left !text-black font-normal edit-field">
+                  <span id="preview-gas-desc-4" class="preview-span !text-black font-normal !text-left"></span>
+              </td>
+              <td><div class="flex items-center px-1"><span class="font-bold mr-1">$</span><input type="number" step="0.01" id="gas-valor-4" oninput="calcular()"></div></td>
+            </tr>
+            <tr>
+              <td class="px-2"><input type="text" id="gas-desc-5" placeholder="Otro..." class="text-left !text-black font-normal edit-field">
+                  <span id="preview-gas-desc-5" class="preview-span !text-black font-normal !text-left"></span>
+              </td>
+              <td><div class="flex items-center px-1"><span class="font-bold mr-1">$</span><input type="number" step="0.01" id="gas-valor-5" oninput="calcular()"></div></td>
+            </tr>
+            <tr>
+              <td class="text-right pr-4 font-bold bg-gray-100/50" style="height: 32px;">TOTAL GASTOS</td>
+              <td class="font-bold bg-gray-100/50 p-0 text-center text-blue-700 align-middle" style="height: 32px;" id="lbl-total-gastos"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- Deposito Row -->
+    <div class="mt-4 w-full">
+      <table class="w-full text-sm font-bold totals-table" style="border: 2px solid black; border-collapse: collapse;">
+        <tr>
+          <td class="w-[60%] bg-gray-100/50 text-right pr-4 tracking-wide align-middle" style="border: 1px solid black;">(INGRESOS - GASTOS) DEPÓSITO</td>
+          <td class="w-[40%] p-0 text-lg text-center text-blue-700 align-middle" style="border: 1px solid black;" id="lbl-deposito"></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Signature area -->
+    <div class="mt-16 mb-4 flex justify-center">
+      <div class="w-64 text-center">
+        <div class="font-bold mb-2">Conductor (Firma):</div>
+        
+        <!-- Editable Firma -->
+        <div class="edit-field flex flex-col items-center">
+          <div class="h-16 w-full border border-dashed border-gray-400 flex items-center justify-center relative overflow-hidden mb-2">
+            <img id="sig-img" class="hidden max-h-full max-w-full object-contain" src="" alt="Firma">
+          </div>
+          <label class="cursor-pointer text-xs bg-black text-white px-3 py-1.5 hover:bg-neutral-800 rounded">
+            Subir Firma
+            <input type="file" accept="image/*" class="hidden hidden-print" onchange="uploadSignature(this)">
+          </label>
+        </div>
+
+        <!-- Preview Firma -->
+        <div class="preview-field hidden flex-col items-center border-b border-black w-full pb-1">
+          <img id="preview-sig-img" class="hidden h-16 object-contain mb-1" src="" alt="Firma">
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function uploadSignature(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          document.getElementById('sig-img').src = e.target.result;
+          document.getElementById('sig-img').classList.remove('hidden');
+          document.getElementById('preview-sig-img').src = e.target.result;
+          document.getElementById('preview-sig-img').classList.remove('hidden');
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function calcular() {
+      let totIngresos = 0;
+      for(let i=1; i<=5; i++) {
+        let b = parseFloat(document.getElementById(`ing-bajada-${i}`).value) || 0;
+        let s = parseFloat(document.getElementById(`ing-subida-${i}`).value) || 0;
+        let t = b + s;
+        if(t > 0) {
+          document.getElementById(`ing-total-${i}`).innerHTML = `<span class="valor-centrado text-blue-700">$ ${t.toFixed(2)}</span>`;
+          totIngresos += t;
+        } else {
+          document.getElementById(`ing-total-${i}`).innerHTML = "";
+        }
+      }
+      
+      let totGastos = 0;
+      for(let i=1; i<=5; i++) {
+        let v = parseFloat(document.getElementById(`gas-valor-${i}`).value) || 0;
+        totGastos += v;
+      }
+
+      document.getElementById('lbl-total-ingresos').innerText = totIngresos > 0 ? "$ " + totIngresos.toFixed(2) : "";
+      document.getElementById('lbl-total-gastos').innerText = totGastos > 0 ? "$ " + totGastos.toFixed(2) : "";
+      
+      let dep = totIngresos - totGastos;
+      document.getElementById('lbl-deposito').innerText = (totIngresos > 0 || totGastos > 0) ? "$ " + dep.toFixed(2) : "";
+    }
+
+    function togglePreviewV2(show) {
+       const container = document.getElementById('hoja-registro');
+       if(show) {
+          // Format date from YYYY-MM-DD to DD/MM/YYYY
+          let dateStr = document.getElementById('input-date').value;
+          if (dateStr) {
+             const parts = dateStr.split('-');
+             dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+          }
+          document.getElementById('preview-date').innerText = dateStr;
+          
+          document.getElementById('preview-unidad').innerText = document.getElementById('input-unidad').value;
+          document.getElementById('preview-propietario').innerText = document.getElementById('input-propietario').value;
+          document.getElementById('preview-codigo').innerText = document.getElementById('input-codigo').value;
+          for(let i=4; i<=5; i++) document.getElementById(`preview-gas-desc-${i}`).innerText = document.getElementById(`gas-desc-${i}`).value;
+
+          container.classList.add('preview-mode');
+          document.querySelectorAll('.edit-field').forEach(el => el.classList.add('hidden'));
+          document.querySelectorAll('.preview-field').forEach(el => el.classList.remove('hidden'));
+
+          document.querySelectorAll('input[type="number"]').forEach(inp => {
+             let span = inp.nextElementSibling;
+             if(!span || !span.classList.contains('auto-prev')) {
+                 span = document.createElement('span');
+                 span.className = 'auto-prev preview-span text-blue-700';
+                 inp.parentNode.insertBefore(span, inp.nextSibling);
+             }
+             let val = parseFloat(inp.value);
+             span.innerText = !isNaN(val) && val > 0 ? val.toFixed(2) : "";
+             
+             // Hide inputs in preview mode explicitly just in case
+             inp.style.display = 'none';
+          });
+
+          let btn = document.getElementById("btn-toggle-preview");
+          btn.innerText = "Editar Formulario";
+          btn.setAttribute("onclick", "togglePreviewV2(false)");
+          btn.classList.replace("bg-amber-500", "bg-emerald-500");
+       } else {
+          container.classList.remove('preview-mode');
+          document.querySelectorAll('.edit-field').forEach(el => el.classList.remove('hidden'));
+          document.querySelectorAll('.preview-field').forEach(el => el.classList.add('hidden'));
+          
+          document.querySelectorAll('input[type="number"]').forEach(inp => {
+             inp.style.display = '';
+             let span = inp.nextElementSibling;
+             if(span && span.classList.contains('auto-prev')) {
+                 span.innerText = "";
+             }
+          });
+
+          let btn = document.getElementById("btn-toggle-preview");
+          btn.innerText = "Ver Vista Previa";
+          btn.setAttribute("onclick", "togglePreviewV2(true)");
+          btn.classList.replace("bg-emerald-500", "bg-amber-500");
+       }
+    }
+
+    function getFileName(extension) {
+      let unidad = document.getElementById("input-unidad").value.trim();
+      let fecha = document.getElementById("input-date").value;
+      
+      let baseName = "Lujoturissa_Registro";
+      
+      if (unidad || fecha) {
+        baseName = "Registro";
+        if (unidad) baseName += "_Unidad_" + unidad;
+        if (fecha) {
+           const parts = fecha.split('-');
+           baseName += "_" + parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+      }
+      return baseName + extension;
+    }
+
+    function exportPDF() {
+      if(!document.getElementById('hoja-registro').classList.contains('preview-mode')) {
+        togglePreviewV2(true);
+      }
+      setTimeout(() => {
+        const element = document.getElementById("hoja-registro");
+        const opt = {
+          margin: 0,
+          filename: getFileName('.pdf'),
+          image: { type: 'jpeg', quality: 1 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save();
+      }, 200);
+    }
+    
+    function exportImage() {
+       if(!document.getElementById('hoja-registro').classList.contains('preview-mode')) togglePreviewV2(true);
+       setTimeout(() => {
+          html2canvas(document.getElementById("hoja-registro"), {scale: 2}).then(canvas => {
+             const link = document.createElement("a");
+             link.download = getFileName('.png');
+             link.href = canvas.toDataURL("image/png");
+             link.click();
+          });
+       }, 200);
+    }
+    
+    function exportExcel() {
+       const data = [
+          ["EMPRESA DE TRANSPORTE LUJOTURISSA S.A"],
+          ["REGISTRO DE TRABAJO DIARIO"],
+          [],
+          ["FECHA:", document.getElementById("input-date").value, "UNIDAD:", document.getElementById("input-unidad").value],
+          ["PROPIETARIO/(A):", document.getElementById("input-propietario").value, "COD. MUNICIPAL:", document.getElementById("input-codigo").value],
+          [],
+          ["INGRESOS", "", "", "", "GASTOS"],
+          ["VUELTA", "$ BAJADA", "$ SUBIDA", "$ TOTAL", "DESCRIPCION", "VALOR"]
+       ];
+       
+       for(let i=1; i<=5; i++) {
+          let b = parseFloat(document.getElementById(`ing-bajada-${i}`).value) || 0;
+          let s = parseFloat(document.getElementById(`ing-subida-${i}`).value) || 0;
+          
+          let gv = parseFloat(document.getElementById(`gas-valor-${i}`).value) || 0;
+          let gd = "";
+          if(i===1) gd = "GASTO COMBUSTIBLE";
+          else if(i===2) gd = "GASTO CONDUCTOR";
+          else if(i===3) gd = "TICKET ADMINISTRACIÓN";
+          else gd = document.getElementById(`gas-desc-${i}`)?.value || "";
+
+          data.push([
+             i, b||"", s||"", (b+s)||"", gd, gv||""
+          ]);
+       }
+       
+       let totIng = parseFloat(document.getElementById('lbl-total-ingresos').innerText.replace('$','')) || 0;
+       let totGas = parseFloat(document.getElementById('lbl-total-gastos').innerText.replace('$','')) || 0;
+       data.push(["TOTAL INGRESOS", totIng, "", "", "TOTAL GASTOS", totGas]);
+       data.push(["(INGRESOS - GASTOS) DEPÓSITO", (totIng-totGas)]);
+       
+       const ws = XLSX.utils.aoa_to_sheet(data);
+       const wb = XLSX.utils.book_new();
+       XLSX.utils.book_append_sheet(wb, ws, "Registro");
+       XLSX.writeFile(wb, getFileName('.xlsx'));
+    }
+  </script>
+</body>
+</html>
